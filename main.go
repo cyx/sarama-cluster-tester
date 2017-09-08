@@ -117,7 +117,14 @@ func checkBits(pool *redis.Pool) {
 
 			if want != v {
 				found = true
-				log.Printf("key=%s got=%s want=%s", k, v, want)
+				var missing []int
+				for i := 0; i < M; i++ {
+					b, _ := redis.Int64(conn.Do("GETBIT", k, i))
+					if b != 1 {
+						missing = append(missing, i)
+					}
+				}
+				log.Printf("key=%s has missing bits on: %+v", missing)
 			}
 		}
 
