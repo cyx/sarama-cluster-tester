@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 
+	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
 	"github.com/heroku/cedar/lib/kafka"
 )
@@ -33,6 +34,10 @@ func AddrsConfig(cfg Config) ([]string, *cluster.Config, error) {
 	config.Consumer.Offsets.Initial = cfg.ConsumerOffsetsInitial
 	config.Consumer.Return.Errors = true
 	config.Group.Return.Notifications = true
+
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Producer.Return.Errors = true
+	config.Producer.Return.Successes = true
 
 	if err := configureTLS(config, cfg.Cert, cfg.Key, cfg.CACert); err != nil {
 		return nil, nil, err
