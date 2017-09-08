@@ -50,6 +50,7 @@ func produce(addrs []string, config *cluster.Config) {
 
 	total := 0
 	errors := 0
+	topic := os.Getenv("TOPIC")
 
 	tick := time.Tick(time.Second)
 
@@ -69,7 +70,7 @@ func produce(addrs []string, config *cluster.Config) {
 			_, _, err := p.SendMessage(&sarama.ProducerMessage{
 				Key:   sarama.StringEncoder(id),
 				Value: sarama.StringEncoder(strconv.Itoa(j)),
-				Topic: "sum",
+				Topic: topic,
 			})
 
 			if err != nil {
@@ -86,7 +87,7 @@ func consume(addrs []string, config *cluster.Config, pool *redis.Pool) {
 	defer conn.Close()
 
 	// init consumer
-	topics := []string{"sum"}
+	topics := []string{os.Getenv("TOPIC")}
 	group := os.Getenv("GROUP_ID")
 	prefix := os.Getenv("KEY_PREFIX")
 
