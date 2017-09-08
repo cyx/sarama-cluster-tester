@@ -38,14 +38,14 @@ func main() {
 	case "produce":
 		produce(addrs, config)
 	case "check":
-		check(pool)
+		checkBits(pool)
 	default:
 		fmt.Fprintf(os.Stderr, "Usage: %s <consume|produce>", os.Args[0])
 		os.Exit(1)
 	}
 }
 
-func check(pool *redis.Pool) {
+func checkSum(pool *redis.Pool) {
 	for {
 		conn := pool.Get()
 		defer conn.Close()
@@ -72,6 +72,44 @@ func check(pool *redis.Pool) {
 			if int64(want) != v {
 				found = true
 				log.Printf("key=%s got=%d want=%d", k, v, want)
+			}
+		}
+
+		if !found {
+			log.Printf("keys=%d all good", len(keys))
+		}
+
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func checkBits(pool *redis.Pool) {
+	for {
+		conn := pool.Get()
+		defer conn.Close()
+
+		prefix := os.Getenv("KEY_PREFIX")
+
+		keys, err := redis.Strings(conn.Do("KEYS", prefix+":*"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		want := ""
+		for i := 0; i < M; i++ {
+			want += strconv.Itoa(i)
+		}
+
+		found := false
+		for _, k := range keys {
+			v, err := redis.String(conn.Do("GET", k))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if want != v {
+				found = true
+				log.Printf("key=%s got=%s want=%s", k, v, want)
 			}
 		}
 
