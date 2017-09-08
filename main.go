@@ -104,6 +104,15 @@ func consume(addrs []string, config *cluster.Config, pool *redis.Pool) {
 	errors := 0
 	total := 0
 	tick := time.Tick(time.Second)
+	errtick := time.Tick(time.Second)
+
+	l := func(err error) {
+		select {
+		case <-errtick:
+			log.Println(err)
+		default:
+		}
+	}
 
 	// consume messages, watch errors and notifications
 	for {
@@ -120,17 +129,19 @@ func consume(addrs []string, config *cluster.Config, pool *redis.Pool) {
 				key := prefix + ":" + string(msg.Key)
 				curr, err := redis.Int64(conn.Do("GET", key))
 				if err != nil {
+					l(err)
 					errors++
 					continue
 				}
 
 				v, err := strconv.Atoi(string(msg.Value))
 				if err != nil {
-					log.Println(err)
+					l(err)
 					continue
 				}
 
 				if _, err = conn.Do("SET", key, curr+int64(v)); err != nil {
+					l(err)
 					errors++
 					continue
 				}
