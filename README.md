@@ -3,7 +3,7 @@
 ## testing theory
 
 1. You define N to be the total number of unique kafka keys
-2. You define M to be the total sum (e.g. for a key K, M of 2 would mean
+2. You define M to be the total number of bits set (e.g. for a key K, M of 2 would mean
    the following messages):
 
    ```
@@ -18,7 +18,8 @@
 
 ### consumer=1
 
-With consumer=1, we're consistently able to arrive at the expected sum.
+With consumer=1, we're consistently able to arrive at the expected outcome, with all N keys
+having all M bits set.
 
 ### consumer>1
 
@@ -28,3 +29,8 @@ of 100) had missing bits set. The number of bits missing were in the range of
 
 Tests were done for consumer=2, consumer=3, consumer=4, and the results were
 largely similar, that some lossiness was observed.
+
+## future tests
+
+It _might_ be that the implementation of sarama-cluster is at fault here, or not.
+A similar test could easily be executed by using the official kafka confluent go library.
