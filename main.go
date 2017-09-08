@@ -35,6 +35,8 @@ func main() {
 	switch os.Args[1] {
 	case "consume":
 		consumeSetBit(addrs, config, pool)
+	case "consume-confluent":
+		consumeConfluent(addrs, pool)
 	case "produce":
 		produce(addrs, config)
 	case "check":
@@ -211,8 +213,6 @@ func consumeSetBit(addrs []string, config *cluster.Config, pool *redis.Pool) {
 
 	// consume messages, watch errors and notifications
 	for {
-		total++
-
 		select {
 		case <-tick:
 			log.Printf("count#consumer-total=%d count#consumer-errors=%d", total, errors)
@@ -221,6 +221,8 @@ func consumeSetBit(addrs []string, config *cluster.Config, pool *redis.Pool) {
 
 		case msg, more := <-consumer.Messages():
 			if more {
+				total++
+
 				v, err := strconv.Atoi(string(msg.Value))
 				if err != nil {
 					l(err)
