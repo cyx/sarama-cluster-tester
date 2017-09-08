@@ -10,6 +10,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
+	"github.com/garyburd/redigo/redis"
 	"github.com/joeshaw/envdecode"
 	"github.com/pborman/uuid"
 )
