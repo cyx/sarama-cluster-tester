@@ -1,2 +1,2 @@
-producer: evbus-cluster producer
-consumer: evbus-cluster consumer
+producer: evbus-cluster produce
+consumer: evbus-cluster consume
