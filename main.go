@@ -13,6 +13,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/joeshaw/envdecode"
 	"github.com/pborman/uuid"
+	"github.com/soveran/redisurl"
 )
 
 func main() {
@@ -128,7 +129,7 @@ func consume(addrs []string, config *cluster.Config, pool *redis.Pool) {
 					continue
 				}
 
-				if _, err = conn.Do("SET", key, curr+v); err != nil {
+				if _, err = conn.Do("SET", key, curr+int64(v)); err != nil {
 					errors++
 					continue
 				}

@@ -113,6 +113,12 @@
 			"revisionTime": "2016-11-28T21:05:44Z"
 		},
 		{
+			"checksumSHA1": "9MPxFV+DEXAisH931lAdnGQ4JwA=",
+			"path": "github.com/soveran/redisurl",
+			"revision": "ac42ec99510b5f21d11560d316adcc5bc41f0915",
+			"revisionTime": "2013-05-20T14:15:37Z"
+		},
+		{
 			"checksumSHA1": "9jjO5GjLa0XF/nfWihF02RoH4qc=",
 			"origin": "github.com/heroku/cedar/vendor/golang.org/x/net/context",
 			"path": "golang.org/x/net/context",
