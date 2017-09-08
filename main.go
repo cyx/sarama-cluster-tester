@@ -16,6 +16,11 @@ import (
 	"github.com/soveran/redisurl"
 )
 
+const (
+	N = 100 // how many keys to create.
+	M = 100 // the total sum of each key.
+)
+
 func main() {
 	var cfg Config
 	envdecode.MustStrictDecode(&cfg)
@@ -32,9 +37,49 @@ func main() {
 		consume(addrs, config, pool)
 	case "produce":
 		produce(addrs, config)
+	case "check":
+		check(pool)
 	default:
 		fmt.Fprintf(os.Stderr, "Usage: %s <consume|produce>", os.Args[0])
 		os.Exit(1)
+	}
+}
+
+func check(pool *redis.Pool) {
+	for {
+		conn := pool.Get()
+		defer conn.Close()
+
+		prefix := os.Getenv("KEY_PREFIX")
+
+		keys, err := redis.Strings(conn.Do("KEYS", prefix+":*"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		want := 0
+		for i := 0; i < M; i++ {
+			want += i
+		}
+
+		found := false
+		for _, k := range keys {
+			v, err := redis.Int64(conn.Do("GET", k))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if int64(want) != v {
+				found = true
+				log.Printf("key=%s got=%d want=%d", k, v, want)
+			}
+		}
+
+		if !found {
+			log.Printf("keys=%d all good", len(keys))
+		}
+
+		time.Sleep(10 * time.Second)
 	}
 }
 
@@ -44,9 +89,6 @@ func produce(addrs []string, config *cluster.Config) {
 		log.Fatal(err)
 	}
 	defer p.Close()
-
-	N := 100 // how many keys to create.
-	M := 100 // the total sum of each key.
 
 	total := 0
 	errors := 0
