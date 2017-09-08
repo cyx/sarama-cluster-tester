@@ -69,7 +69,8 @@ func produce(addrs []string, config *cluster.Config) {
 func consume(addrs []string, config *cluster.Config) {
 	// init consumer
 	topics := []string{"sum"}
-	consumer, err := cluster.NewConsumer(addrs, "summer", topics, config)
+	group := os.Getenv("GROUP_ID")
+	consumer, err := cluster.NewConsumer(addrs, group, topics, config)
 	if err != nil {
 		panic(err)
 	}
