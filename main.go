@@ -129,9 +129,11 @@ func consume(addrs []string, config *cluster.Config, pool *redis.Pool) {
 				key := prefix + ":" + string(msg.Key)
 				curr, err := redis.Int64(conn.Do("GET", key))
 				if err != nil {
-					l(err)
-					errors++
-					continue
+					if err != redis.ErrNil {
+						l(err)
+						errors++
+						continue
+					}
 				}
 
 				v, err := strconv.Atoi(string(msg.Value))
