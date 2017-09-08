@@ -124,7 +124,7 @@ func checkBits(pool *redis.Pool) {
 						missing = append(missing, i)
 					}
 				}
-				log.Printf("key=%s has missing bits on: %+v", missing)
+				log.Printf("key=%s has missing bits on: %+v", k, missing)
 			}
 		}
 
