@@ -39,6 +39,18 @@
 			"revisionTime": "2016-08-05T00:47:13Z"
 		},
 		{
+			"checksumSHA1": "2UmMbNHc8FBr98mJFN1k8ISOIHk=",
+			"path": "github.com/garyburd/redigo/internal",
+			"revision": "b925df3cc15d8646e9b5b333ebaf3011385aba11",
+			"revisionTime": "2017-08-14T17:23:35Z"
+		},
+		{
+			"checksumSHA1": "zxm1ahSCAclqI4JIvyuRbytF2pA=",
+			"path": "github.com/garyburd/redigo/redis",
+			"revision": "b925df3cc15d8646e9b5b333ebaf3011385aba11",
+			"revisionTime": "2017-08-14T17:23:35Z"
+		},
+		{
 			"checksumSHA1": "p/8vSviYF91gFflhrt5vkyksroo=",
 			"path": "github.com/golang/snappy",
 			"revision": "553a641470496b2327abcac10b36396bd98e45c9",
