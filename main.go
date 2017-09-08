@@ -16,9 +16,9 @@ import (
 	"github.com/soveran/redisurl"
 )
 
-const (
-	N = 100 // how many keys to create.
-	M = 100 // the total sum of each key.
+var (
+	N, _ = strconv.Atoi(os.Getenv("N")) // how many keys to create.
+	M, _ = strconv.Atoi(os.Getenv("M")) // the total sum of each key.
 )
 
 func main() {
