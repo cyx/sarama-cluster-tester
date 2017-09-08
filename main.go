@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"time"
 
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
@@ -17,6 +18,8 @@ func main() {
 	var cfg Config
 	envdecode.MustStrictDecode(&cfg)
 
+	pool := newRedisPool()
+
 	addrs, config, err := AddrsConfig(cfg)
 	if err != nil {
 		log.Fatal(err)
@@ -24,7 +27,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "consume":
-		consume(addrs, config)
+		consume(addrs, config, pool)
 	case "produce":
 		produce(addrs, config)
 	default:
@@ -40,14 +43,25 @@ func produce(addrs []string, config *cluster.Config) {
 	}
 	defer p.Close()
 
-	N := 1000 // how many keys to create.
-	M := 1000 // the total sum of each key.
+	N := 100 // how many keys to create.
+	M := 100 // the total sum of each key.
 
 	total := 0
 	errors := 0
 
+	tick := time.Tick(time.Second)
+
 	for i := 0; i < N; i++ {
 		id := uuid.New()
+
+		select {
+		case <-tick:
+			log.Printf("count#producer.errors=%d count#producer.total=%d", errors, total)
+			total = 0
+			errors = 0
+
+		default:
+		}
 
 		for j := 0; j < M; j++ {
 			_, _, err := p.SendMessage(&sarama.ProducerMessage{
@@ -63,13 +77,17 @@ func produce(addrs []string, config *cluster.Config) {
 		}
 	}
 
-	log.Printf("count#producer.errors=%d count#producer.total=%d", errors, total)
 }
 
-func consume(addrs []string, config *cluster.Config) {
+func consume(addrs []string, config *cluster.Config, pool *redis.Pool) {
+	conn := pool.Get()
+	defer conn.Close()
+
 	// init consumer
 	topics := []string{"sum"}
 	group := os.Getenv("GROUP_ID")
+	prefix := os.Getenv("KEY_PREFIX")
+
 	consumer, err := cluster.NewConsumer(addrs, group, topics, config)
 	if err != nil {
 		panic(err)
@@ -80,14 +98,43 @@ func consume(addrs []string, config *cluster.Config) {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
 
+	errors := 0
+	total := 0
+	tick := time.Tick(time.Second)
+
 	// consume messages, watch errors and notifications
 	for {
+		total++
+
 		select {
+		case <-tick:
+			log.Printf("count#consumer-total=%d count#consumer-errors=%d", total, errors)
+			total = 0
+			errors = 0
+
 		case msg, more := <-consumer.Messages():
 			if more {
-				fmt.Fprintf(os.Stdout, "%s/%d/%d\t%s\t%s\n", msg.Topic, msg.Partition, msg.Offset, msg.Key, msg.Value)
+				key := prefix + ":" + string(msg.Key)
+				curr, err := redis.Int64(conn.Do("GET", key))
+				if err != nil {
+					errors++
+					continue
+				}
+
+				v, err := strconv.Atoi(string(msg.Value))
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+
+				if _, err = conn.Do("SET", key, curr+v); err != nil {
+					errors++
+					continue
+				}
+
 				consumer.MarkOffset(msg, "") // mark message as processed
 			}
+
 		case err, more := <-consumer.Errors():
 			if more {
 				log.Printf("Error: %s\n", err.Error())
@@ -99,5 +146,17 @@ func consume(addrs []string, config *cluster.Config) {
 		case <-signals:
 			return
 		}
+	}
+}
+
+func newRedisPool() *redis.Pool {
+	return &redis.Pool{
+		Dial: func() (redis.Conn, error) {
+			conn, err := redisurl.ConnectToURL(os.Getenv("REDIS_URL"))
+			if err != nil {
+				return nil, err
+			}
+			return conn, nil
+		},
 	}
 }
