@@ -34,7 +34,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "consume":
-		consume(addrs, config, pool)
+		consumeSetBit(addrs, config, pool)
 	case "produce":
 		produce(addrs, config)
 	case "check":
@@ -124,7 +124,82 @@ func produce(addrs []string, config *cluster.Config) {
 
 }
 
-func consume(addrs []string, config *cluster.Config, pool *redis.Pool) {
+func consumeSetBit(addrs []string, config *cluster.Config, pool *redis.Pool) {
+	conn := pool.Get()
+	defer conn.Close()
+
+	// init consumer
+	topics := []string{os.Getenv("TOPIC")}
+	group := os.Getenv("GROUP_ID")
+	prefix := os.Getenv("KEY_PREFIX")
+
+	consumer, err := cluster.NewConsumer(addrs, group, topics, config)
+	if err != nil {
+		panic(err)
+	}
+	defer consumer.Close()
+
+	// trap SIGINT to trigger a shutdown.
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt)
+
+	errors := 0
+	total := 0
+	tick := time.Tick(time.Second)
+	errtick := time.Tick(time.Second)
+
+	l := func(err error) {
+		select {
+		case <-errtick:
+			log.Println(err)
+		default:
+		}
+	}
+
+	// consume messages, watch errors and notifications
+	for {
+		total++
+
+		select {
+		case <-tick:
+			log.Printf("count#consumer-total=%d count#consumer-errors=%d", total, errors)
+			total = 0
+			errors = 0
+
+		case msg, more := <-consumer.Messages():
+			if more {
+				v, err := strconv.Atoi(string(msg.Value))
+				if err != nil {
+					l(err)
+					continue
+				}
+
+				key := prefix + ":" + string(msg.Key)
+				_, err = conn.Do("SETBIT", key, v, 1)
+				if err != nil {
+					l(err)
+					errors++
+					continue
+				}
+
+				consumer.MarkOffset(msg, "") // mark message as processed
+			}
+
+		case err, more := <-consumer.Errors():
+			if more {
+				log.Printf("Error: %s\n", err.Error())
+			}
+		case ntf, more := <-consumer.Notifications():
+			if more {
+				log.Printf("Rebalanced: %+v\n", ntf)
+			}
+		case <-signals:
+			return
+		}
+	}
+}
+
+func consumeSum(addrs []string, config *cluster.Config, pool *redis.Pool) {
 	conn := pool.Get()
 	defer conn.Close()
 
